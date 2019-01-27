@@ -1,5 +1,8 @@
-package Scans;
+package Tests;
 
+import Scans.ParallelScan;
+import Scans.SequentialParallelScan;
+import Scans.SequentialScan;
 import org.junit.Test;
 
 import java.util.ArrayList;

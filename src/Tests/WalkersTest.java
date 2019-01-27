@@ -1,20 +1,33 @@
-package Simulations;
+package Tests;
 
+import Simulations.RandomWalkers;
 import Structures.SimpleGraph;
+import Structures.Vertex;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 
 public class WalkersTest {
 
-    public long runTest(SimpleGraph g) {
-        return (new RandomWalkers(g)).run();
+    private long runTest(SimpleGraph g, Collection<Vertex> walkers) {
+        return (new RandomWalkers(g, walkers)).run();
+    }
+
+    @Test
+    public void testLine() {
+        SimpleGraph line = new SimpleGraph();
+        int vertices = 20;
+        for (int i = 0; i < vertices; i++) {
+            line.addVertex(i);
+        }
+        for (int i = 0; i < vertices - 1; i++) {
+            line.addEdge(i, i + 1);
+        }
+        Collection<Vertex> walkers = getRandomVertices(line.getVertices(), vertices/2);
+        printTime(runTest(line, walkers));
     }
 
     @Test
@@ -27,7 +40,8 @@ public class WalkersTest {
         for (int i = 0; i < vertices; i++) {
             cycle.addEdge(i, (i + 1) % vertices);
         }
-        printTime(runTest(cycle));
+        Collection<Vertex> walkers = getRandomVertices(cycle.getVertices(), vertices/2);
+        printTime(runTest(cycle, walkers));
     }
 
     @Test
@@ -42,7 +56,8 @@ public class WalkersTest {
                 clique.addEdge(i, j);
             }
         }
-        printTime(runTest(clique));
+        Collection<Vertex> walkers = getRandomVertices(clique.getVertices(), vertices/2);
+        printTime(runTest(clique, walkers));
     }
 
     @Test
@@ -62,10 +77,24 @@ public class WalkersTest {
         for (int i = 0; i < estimatedRandomEdges; i++) {
             random.addEdge(r.nextInt(vertices), r.nextInt(vertices));
         }
-        printTime(runTest(random));
+        Collection<Vertex> walkers = getRandomVertices(random.getVertices(), vertices/2);
+        printTime(runTest(random, walkers));
     }
 
     private static void printTime(long t) {
         System.out.println("Process finished after " + t + " ms");
+    }
+
+    private Set<Vertex> getRandomVertices(Collection<Vertex> v, int n) {
+        if (n >= v.size()) {
+            n = v.size();
+        }
+        Vertex[] vArr = v.stream().toArray(Vertex[]::new);
+        Collections.shuffle(Arrays.asList(vArr));
+        Set<Vertex> result = new HashSet<>();
+        for (int i = 0; i < n; i++) {
+            result.add(vArr[i]);
+        }
+        return result;
     }
 }

@@ -46,4 +46,26 @@ public class SimpleGraph {
     public int getEdgeCount() {
         return edges.size()/2;
     }
+
+    public boolean isConnected() {
+        if (vertices.values().size() == 0) {
+            return true;
+        }
+        Vertex start = vertices.values().iterator().next();
+        Set<Vertex> black = new HashSet<>();
+        Set<Vertex> gray = new HashSet<>();
+        Queue<Vertex> q = new ArrayDeque<>();
+        q.add(start);
+        while (!q.isEmpty()) {
+            Vertex curr = q.poll();
+            black.add(curr);
+            for (Vertex v : edges.get(curr)) {
+                if (!black.contains(v) && !gray.contains(v)) {
+                    gray.add(v);
+                    q.add(v);
+                }
+            }
+        }
+        return black.size() == vertices.values().size();
+    }
 }

@@ -5,10 +5,7 @@ import Structures.Vertex;
 
 import java.lang.management.ManagementFactory;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
@@ -18,38 +15,47 @@ public class RandomWalkers {
     private final CountDownLatch starter;
     private final CountDownLatch ender;
     private Set<Thread> threads = new HashSet<>();
-    private Map<Vertex, Lock> vertexLocks = new HashMap<>();
+    private Map<Vertex, ReentrantLock> vertexLocks = new HashMap<>();
 
-    public RandomWalkers(SimpleGraph g) {
+    public RandomWalkers(SimpleGraph g, Collection<Vertex> walkersStartingPoints) {
         this.g = g;
-        int walkersCount = g.getVertexCount() / 2;
         for (Vertex v : g.getVertices()) {
             vertexLocks.put(v, new ReentrantLock());
         }
-        ender = new CountDownLatch(walkersCount - 1);
-        starter = new CountDownLatch(walkersCount);
-        for (int i = 0; i < walkersCount; i++) {
-            Thread t = new Thread(new Walker(g.getVertex(i), i));
+        ender = new CountDownLatch(walkersStartingPoints.size() - 1);
+        starter = new CountDownLatch(walkersStartingPoints.size() + 1);
+        int i = 0;
+        for (Vertex v : walkersStartingPoints) {
+            Thread t = new Thread(new Walker(v, i++));
             t.start();
             threads.add(t);
         }
 
         //register deadlock detection
-        ScheduledThreadPoolExecutor ex = new ScheduledThreadPoolExecutor(1);
+        ScheduledExecutorService ex = Executors.newScheduledThreadPool(1);
         ex.scheduleAtFixedRate(() -> {
-            Set<Long> deadlocks = Arrays.stream(ManagementFactory.getThreadMXBean().findDeadlockedThreads()).boxed().collect(Collectors.toSet());
+            long[] deadlocksArr = ManagementFactory.getThreadMXBean().findDeadlockedThreads();
+            if (deadlocksArr == null) {
+                return;
+            }
+            Set<Long> deadlocks = Arrays.stream(deadlocksArr).boxed().collect(Collectors.toSet());
             for (Thread t : threads) {
                 if (deadlocks.contains(t.getId())) {
                     System.out.println("Killing deadlocked thread " + t.getId());
                     t.interrupt();
                 }
             }
-        }, 0, (10000 + g.getEdgeCount()) / g.getEdgeCount(), TimeUnit.MILLISECONDS);
+        }, 0, 500, TimeUnit.MILLISECONDS);
     }
 
     public long run() {
+        if (!g.isConnected()) {
+            System.out.println("The graph is not connected");
+            return -1;
+        }
         long startTime = 0, endTime = 0;
         try {
+            starter.countDown();
             starter.await();
             startTime = System.currentTimeMillis();
             ender.await();
@@ -65,13 +71,13 @@ public class RandomWalkers {
 
 
     class Walker implements Runnable {
-        Random generator = new Random();
-        Vertex currentVertex;
-        Thread currentThread;
-        int timeAlive = 0;
-        int index;
+        private Random generator = new Random();
+        private Vertex currentVertex;
+        private Thread currentThread;
+        private int timeAlive = 0;
+        private int index;
 
-        public Walker(Vertex v, int index) {
+        Walker(Vertex v, int index) {
             this.index = index;
             currentVertex = v;
             takenBy.put(currentVertex, this);
@@ -84,30 +90,31 @@ public class RandomWalkers {
                 starter.await();
                 while (!Thread.currentThread().isInterrupted()) {
                     timeAlive++;
-                    boolean shouldMove = generator.nextBoolean();
-                    if (shouldMove) {
-                        int chosenElement = generator.nextInt(g.getNeighbours(currentVertex.getID()).size());
-                        Vertex to = g.getNeighbours(currentVertex.getID()).get(chosenElement);
-                        Vertex from = currentVertex;
+                    int chosenElement = generator.nextInt(g.getNeighbours(currentVertex.getID()).size());
+                    Vertex to = g.getNeighbours(currentVertex.getID()).get(chosenElement);
+                    Vertex from = currentVertex;
+                    try {
+                        vertexLocks.get(from).lockInterruptibly();
                         try {
-                            vertexLocks.get(from).lockInterruptibly();
-                            try {
-                                vertexLocks.get(to).lockInterruptibly();
-                                if (takenBy.keySet().contains(to)) {
-                                    System.out.println(index + " killed " + takenBy.get(to).index);
-                                    takenBy.get(to).currentThread.interrupt();
-                                }
-                                takenBy.put(to, this);
-                                takenBy.keySet().remove(currentVertex);
-                                currentVertex = to;
-                                vertexLocks.get(to).unlock();
-                            } catch (InterruptedException e) {
-                                vertexLocks.get(from).unlock();
-                                return;
+                            vertexLocks.get(to).lockInterruptibly();
+                            if (takenBy.keySet().contains(to)) {
+                                takenBy.get(to).interrupt();
                             }
-                            vertexLocks.get(from).unlock();
+                            takenBy.put(to, this);
+                            takenBy.keySet().remove(currentVertex);
+                            currentVertex = to;
                         } catch (InterruptedException e) {
                             return;
+                        } finally {
+                            if (vertexLocks.get(to).isHeldByCurrentThread()) {
+                                vertexLocks.get(to).unlock();
+                            }
+                        }
+                    } catch (InterruptedException e) {
+                        return;
+                    } finally {
+                        if (vertexLocks.get(from).isHeldByCurrentThread()) {
+                            vertexLocks.get(from).unlock();
                         }
                     }
                     Thread.sleep(10);
@@ -117,6 +124,10 @@ public class RandomWalkers {
                 ender.countDown();
                 printDeadMessage();
             }
+        }
+
+        void interrupt() {
+            currentThread.interrupt();
         }
 
         private void printDeadMessage() {
