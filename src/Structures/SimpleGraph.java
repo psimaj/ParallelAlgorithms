@@ -35,7 +35,15 @@ public class SimpleGraph {
         return vertices.get(ind);
     }
 
+    public Collection<Vertex> getVertices() {
+        return vertices.values();
+    }
+
     public int getVertexCount() {
         return vertices.keySet().size();
+    }
+
+    public int getEdgeCount() {
+        return edges.size()/2;
     }
 }

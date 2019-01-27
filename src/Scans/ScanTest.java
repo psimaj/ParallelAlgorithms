@@ -1,6 +1,6 @@
-import Scans.ParallelScan;
-import Scans.SequentialParallelScan;
-import Scans.SequentialScan;
+package Scans;
+
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +46,7 @@ public class ScanTest {
         System.out.println();
     }
 
+    @Test
     public static void test1() {
         List<Integer> num = new ArrayList<>();
         System.out.println("10 integers, + operation");
@@ -55,6 +56,7 @@ public class ScanTest {
         runTest(num, (x, y) -> x + y);
     }
 
+    @Test
     public static void test2() {
         List<Integer> num = new ArrayList<>();
         System.out.println("100 integers, * operation");
@@ -64,6 +66,7 @@ public class ScanTest {
         runTest(num, (x, y) -> x * y);
     }
 
+    @Test
     public static void test3() {
         List<Integer> num = new ArrayList<>();
         System.out.println("1000000 integers, + operation");
@@ -73,6 +76,7 @@ public class ScanTest {
         runTest(num, (x, y) -> x + y);
     }
 
+    @Test
     public static void test4() {
         List<Integer> num = new ArrayList<>();
         System.out.println("10000000 integers, * operation");
