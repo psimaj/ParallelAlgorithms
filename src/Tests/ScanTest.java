@@ -11,7 +11,7 @@ import java.util.function.BinaryOperator;
 
 public class ScanTest {
 
-    public static <T> void runTest(List<T> num, BinaryOperator<T> f) {
+    <T> void runTest(List<T> num, BinaryOperator<T> f) {
         System.out.println();
         long startTime, endTime, totalTime;
 
@@ -50,7 +50,7 @@ public class ScanTest {
     }
 
     @Test
-    public static void test1() {
+    public void test1() {
         List<Integer> num = new ArrayList<>();
         System.out.println("10 integers, + operation");
         for (int i = 0; i < 10; i++) {
@@ -60,7 +60,7 @@ public class ScanTest {
     }
 
     @Test
-    public static void test2() {
+    public void test2() {
         List<Integer> num = new ArrayList<>();
         System.out.println("100 integers, * operation");
         for (int i = 0; i < 100; i++) {
@@ -70,7 +70,7 @@ public class ScanTest {
     }
 
     @Test
-    public static void test3() {
+    public void test3() {
         List<Integer> num = new ArrayList<>();
         System.out.println("1000000 integers, + operation");
         for (int i = 0; i < 1000000; i++) {
@@ -80,7 +80,7 @@ public class ScanTest {
     }
 
     @Test
-    public static void test4() {
+    public void test4() {
         List<Integer> num = new ArrayList<>();
         System.out.println("10000000 integers, * operation");
         for (int i = 0; i < 10000000; i++) {
