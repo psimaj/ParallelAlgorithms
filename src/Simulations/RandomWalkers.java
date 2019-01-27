@@ -12,16 +12,27 @@ import java.util.stream.Collectors;
 public class RandomWalkers {
     private SimpleGraph g;
     private Map<Vertex, Walker> takenBy = Collections.synchronizedMap(new HashMap<>());
-    private final CountDownLatch starter;
-    private final CountDownLatch ender;
+    private CountDownLatch starter;
+    private CountDownLatch ender;
     private Set<Thread> threads = new HashSet<>();
     private Map<Vertex, ReentrantLock> vertexLocks = new HashMap<>();
+    private Collection<Vertex> walkersStartingPoints;
 
     public RandomWalkers(SimpleGraph g, Collection<Vertex> walkersStartingPoints) {
         this.g = g;
+        this.walkersStartingPoints = walkersStartingPoints;
         for (Vertex v : g.getVertices()) {
             vertexLocks.put(v, new ReentrantLock());
         }
+    }
+
+    public long run() {
+        if (!g.isConnected()) {
+            System.out.println("The graph is not connected");
+            return -1;
+        }
+        threads.clear();
+        takenBy.clear();
         ender = new CountDownLatch(walkersStartingPoints.size() - 1);
         starter = new CountDownLatch(walkersStartingPoints.size() + 1);
         int i = 0;
@@ -46,13 +57,7 @@ public class RandomWalkers {
                 }
             }
         }, 0, 500, TimeUnit.MILLISECONDS);
-    }
 
-    public long run() {
-        if (!g.isConnected()) {
-            System.out.println("The graph is not connected");
-            return -1;
-        }
         long startTime = 0, endTime = 0;
         try {
             starter.countDown();
@@ -66,6 +71,7 @@ public class RandomWalkers {
             }
         } catch (InterruptedException e) {
         }
+        ex.shutdown();
         return endTime - startTime;
     }
 
